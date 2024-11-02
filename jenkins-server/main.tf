@@ -91,7 +91,7 @@ module "security_group" {
       description = "ssh"
       cidr_blocks = "0.0.0.0/0"
     }
-    ]
+  ]
 
   egress_cidr_blocks = ["0.0.0.0/0"]
 

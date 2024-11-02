@@ -6,28 +6,24 @@ curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip
 unzip awscliv2.zip
 sudo ./aws/install
 
-# Install Docker
-# Add Docker's official GPG key:
-sudo apt-get update -y
-sudo apt-get install -y ca-certificates curl
+#install docker 
+sudo apt-get install ca-certificates curl gnupg
 sudo install -m 0755 -d /etc/apt/keyrings
-# timeout 60 
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-# Add the repository to Apt sources:
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu focal stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update -y
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-sudo usermod -aG docker ubuntu
-sudo chmod 777 /var/run/docker.sock
-# sudo newgrp docker
-docker --version
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+sudo usermod -aG docker ubuntu #avoid permission error(adding ubuntu user to docker group)
+sudo newgrp docker #avoid restarting the server
+sudo usermod -aG docker jenkins #adding jenkins user to docker group
+sudo newgrp docker #avoid restarting the server
+sudo systemctl restart docker
+sudo systemctl start docker
+sudo systemctl enable docker
 
-# Install Sonarqube (as image)
-docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
+
+#install sonarqube to run on docker
+sudo docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
 
 # Install Trivy
 sudo apt-get install -y wget apt-transport-https gnupg
