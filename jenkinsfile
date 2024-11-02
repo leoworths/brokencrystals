@@ -1,0 +1,90 @@
+pipeline {
+    agent any
+    tools {
+        nodejs 'nodejs'
+    }
+    environment {
+        SCANNER_HOME = tool 'Sonar-scanner'
+        IMAGE_NAME = 'leoworths/brokencrystals'
+    }
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/leoworths/brokencrystals.git'
+            }
+        }
+        stage('Install Package Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Test Cases') {
+            steps {
+                sh 'npm test -- --skipTests'
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh """$SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectName=BrokenCrystals \
+                        -Dsonar.projectKey=BrokenCrystals"""
+                }
+            }
+        }
+        stage('SonarQube Quality Gate') {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
+            }
+        }
+        stage('OWASP Dependency Check') {
+            steps {
+                dependencyCheck additionalOptions: '--scan ./ --format HTML', odcInstallation: 'owasp'
+                dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+            }
+        }
+        stage('Docker Build Image') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-login') {
+                        sh "docker build -t ${IMAGE_NAME}:latest ."
+                    }
+                }
+            }
+        }
+        stage('Docker Image Scan') {
+            steps {
+                sh "trivy image --format table -o image-results.html ${IMAGE_NAME}:latest"
+            }
+        }
+        stage('Docker Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-login') {
+                        sh "docker push ${IMAGE_NAME}:latest"
+                    }
+                }
+            }
+        }
+        stage('Deploy to K8s') {
+            steps {
+                withKubeConfig(caCertificate: '', clusterName: 'crystal-cluster', contextName: '', credentialsId: 'k8s-cred', namespace: 'crystals', serverUrl: '') {
+                    sh "kubectl apply -f deployment.yaml -n crystals"
+                    sh "kubectl get svc -n crystals"
+                }
+            }
+        }
+        stage(DAST Scan with OWASP ZAP) {
+            steps {
+                sh 'docker run owasp/zap2docker-stable zap-baseline.py -t http://localhost:30001 -T 300 -r zap_report.html'
+            }
+        }
+        stage('DAST Report') {
+            steps {
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '', reportFiles: 'zap_report.html', reportName: 'DAST Report', reportTitles: ''])
+        }
+        }
+            }
+                
+            }
+        
