@@ -71,7 +71,7 @@ sudo tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
 sudo mv /tmp/eksctl /usr/local/bin
 
 #aws eks config
-aws eks update-kubeconfig --region us-east-1 --name eks-cluster
+#aws eks update-kubeconfig --region us-east-1 --name eks-cluster
 
 #install nodejs
 sudo apt install nodejs -y
